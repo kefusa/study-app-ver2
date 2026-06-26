@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Study Tracker</title>
+<title>Study Tracker Pro</title>
 
 <style>
 body {
@@ -45,17 +45,14 @@ button { cursor: pointer; }
 
 <body>
 
-<h1>📚 Study Tracker</h1>
+<h1>📚 Study Tracker Pro</h1>
 
-<!-- テスト日 -->
 <div class="card">
 <h2>📅 テスト日</h2>
 <input type="date" id="testDate">
 <button onclick="setTest()">設定</button>
-<p id="countdown"></p>
 </div>
 
-<!-- 予定追加 -->
 <div class="card">
 <h2>📅 予定追加</h2>
 
@@ -73,10 +70,9 @@ button { cursor: pointer; }
 <button onclick="addEvent()">追加</button>
 </div>
 
-<!-- カレンダー -->
 <div class="card">
 <h2>📅 カレンダー</h2>
-<div id="calendar"></div>
+<div id="calendar">読み込み中...</div>
 </div>
 
 <script>
@@ -84,121 +80,144 @@ button { cursor: pointer; }
 let testDate = null;
 let events = {};
 
-/* ================= 保存 ================= */
-
+/* ================= 安全保存 ================= */
 function saveData(){
-  localStorage.setItem("testDate", document.getElementById("testDate").value);
-  localStorage.setItem("events", JSON.stringify(events));
+  try{
+    localStorage.setItem("testDate", document.getElementById("testDate")?.value || "");
+    localStorage.setItem("events", JSON.stringify(events));
+  }catch(e){
+    console.log("save error", e);
+  }
 }
 
 /* ================= 読み込み ================= */
-
 function loadData(){
+  try{
 
-  const t = localStorage.getItem("testDate");
-  if(t){
-    document.getElementById("testDate").value = t;
-    testDate = new Date(t + "T00:00:00"); // ←ズレ防止
+    const t = localStorage.getItem("testDate");
+    if(t){
+      document.getElementById("testDate").value = t;
+      testDate = new Date(t + "T00:00:00");
+    }
+
+    const e = localStorage.getItem("events");
+    if(e) events = JSON.parse(e);
+
+  }catch(e){
+    console.log("load error", e);
   }
-
-  const e = localStorage.getItem("events");
-  if(e) events = JSON.parse(e);
 
   generateCalendar();
 }
 
-/* ================= テスト日設定 ================= */
-
+/* ================= テスト日 ================= */
 function setTest(){
-  const v = document.getElementById("testDate").value;
-  if(!v) return;
+  try{
+    const v = document.getElementById("testDate").value;
+    if(!v) return;
 
-  testDate = new Date(v + "T00:00:00"); // ←ズレ防止
-  saveData();
-  generateCalendar();
+    testDate = new Date(v + "T00:00:00");
+    saveData();
+    generateCalendar();
+  }catch(e){
+    console.log(e);
+  }
 }
 
 /* ================= 予定追加 ================= */
-
 function addEvent(){
+  try{
+    const date = document.getElementById("eventDate").value;
+    const text = document.getElementById("eventText").value;
 
-  const date = document.getElementById("eventDate").value;
-  const text = document.getElementById("eventText").value;
+    if(!date || !text) return;
 
-  if(!date || !text){
-    alert("日付と内容を入力してね");
-    return;
+    if(!events[date]) events[date] = [];
+
+    events[date].push({ text });
+
+    document.getElementById("eventText").value = "";
+
+    saveData();
+    generateCalendar();
+
+  }catch(e){
+    console.log(e);
   }
-
-  if(!events[date]){
-    events[date] = [];
-  }
-
-  events[date].push({ text });
-
-  document.getElementById("eventText").value = "";
-
-  saveData();
-  generateCalendar();
 }
 
-/* ================= 安定日付キー ================= */
-
+/* ================= 日付キー ================= */
 function formatDate(d){
-  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  try{
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  }catch(e){
+    return "";
+  }
 }
 
-/* ================= カレンダー ================= */
-
+/* ================= カレンダー（絶対止まらない） ================= */
 function generateCalendar(){
 
   const c = document.getElementById("calendar");
+  if(!c) return;
+
   c.innerHTML = "";
 
-  // テスト未設定でも表示
-  if(!testDate){
-    c.innerHTML = "📅 テスト日を設定してください";
-    return;
-  }
+  try{
 
-  for(let i = 30; i >= 0; i--){
-
-    let d = new Date(testDate);
-    d.setDate(d.getDate() - i);
-
-    const key = formatDate(d);
-    const label = `${d.getMonth()+1}/${d.getDate()}`;
-
-    let div = document.createElement("div");
-    div.className = "calendar-day";
-
-    let eventText = "";
-
-    if(events[key]){
-      eventText = "<br>" + events[key]
-        .map(e => "・" + e.text)
-        .join("<br>");
+    if(!testDate){
+      c.innerHTML = "📅 テスト日を設定してください";
+      return;
     }
 
-    if(i === 0){
-      div.innerHTML = `<span class="test">${label} テスト</span>${eventText}`;
-    }
-    else if(i === 14){
-      div.innerHTML = `<span class="due">${label} ⚠ 課題締切</span>${eventText}`;
-    }
-    else if(i < 14){
-      div.innerHTML = `<span class="focus">${label} 📚 集中期間</span>${eventText}`;
-    }
-    else {
-      div.innerHTML = `${label}${eventText}`;
+    for(let i = 30; i >= 0; i--){
+
+      try{
+
+        let d = new Date(testDate);
+        d.setDate(d.getDate() - i);
+
+        const key = formatDate(d);
+        const label = `${d.getMonth()+1}/${d.getDate()}`;
+
+        let div = document.createElement("div");
+        div.className = "calendar-day";
+
+        let eventText = "";
+
+        if(events && events[key]){
+          eventText = "<br>" + events[key]
+            .map(e => "・" + (e.text || ""))
+            .join("<br>");
+        }
+
+        if(i === 0){
+          div.innerHTML = `<span class="test">${label} テスト</span>${eventText}`;
+        }
+        else if(i === 14){
+          div.innerHTML = `<span class="due">${label} ⚠ 締切</span>${eventText}`;
+        }
+        else if(i < 14){
+          div.innerHTML = `<span class="focus">${label} 📚 集中期間</span>${eventText}`;
+        }
+        else {
+          div.innerHTML = `${label}${eventText}`;
+        }
+
+        c.appendChild(div);
+
+      }catch(inner){
+        console.log("day error", inner);
+      }
     }
 
-    c.appendChild(div);
+  }catch(e){
+    console.log("calendar fatal error", e);
+    c.innerHTML = "エラーが発生しました（再読み込みしてください）";
   }
 }
 
 /* ================= 起動 ================= */
-
 loadData();
 
 </script>

@@ -1,3 +1,7 @@
+📦 引き継ぎ用まとめ（これ1つで復元できる）
+📌 ファイル名
+index.html
+📚 完全版コード（安定・公開OK）
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -10,9 +14,9 @@ body {
   font-family: sans-serif;
   margin: 0;
   padding: 15px;
-  background: #f5f5f5;
   max-width: 500px;
   margin: auto;
+  background: #f5f5f5;
 }
 
 .card {
@@ -23,29 +27,16 @@ body {
 }
 
 input, select, button {
+  width: 100%;
   padding: 10px;
   margin: 5px 0;
-  width: 100%;
   font-size: 16px;
 }
 
-button {
-  cursor: pointer;
-}
-
-.task {
-  display: flex;
-  justify-content: space-between;
-  margin: 5px 0;
-}
-
-.done {
-  text-decoration: line-through;
-  color: gray;
-}
+button { cursor: pointer; }
 
 .calendar-day {
-  padding: 5px;
+  padding: 6px;
   border-bottom: 1px solid #ddd;
   font-size: 14px;
 }
@@ -53,11 +44,6 @@ button {
 .test { color: red; font-weight: bold; }
 .focus { color: #333; }
 .due { color: orange; font-weight: bold; }
-
-.small {
-  font-size: 13px;
-  color: #666;
-}
 </style>
 </head>
 
@@ -65,7 +51,7 @@ button {
 
 <h1>📚 Study Tracker</h1>
 
-<!-- テスト -->
+<!-- テスト日 -->
 <div class="card">
 <h2>📅 テスト日</h2>
 <input type="date" id="testDate">
@@ -73,276 +59,161 @@ button {
 <p id="countdown"></p>
 </div>
 
-<!-- 勉強 -->
+<!-- 予定追加 -->
 <div class="card">
-<h2>📖 勉強時間</h2>
+<h2>📅 予定追加</h2>
 
-<select id="subject">
-  <option>国語</option>
-  <option>数学</option>
-  <option>英語</option>
-  <option>理科</option>
-  <option>社会</option>
+<input type="date" id="eventDate">
+
+<select id="eventType">
+  <option value="study">勉強</option>
+  <option value="club">部活</option>
+  <option value="cram">塾</option>
+  <option value="task">課題</option>
 </select>
 
-<input type="number" id="time" placeholder="分">
-<button onclick="addStudy()">追加</button>
+<input type="text" id="eventText" placeholder="内容">
 
-<div id="studyResult"></div>
-<p id="total">合計：0分</p>
-</div>
-
-<!-- 課題 -->
-<div class="card">
-<h2>📝 課題</h2>
-
-<input type="text" id="taskInput" placeholder="例：英語 P10〜P15">
-<input type="date" id="borderDate">
-<button onclick="addTask()">追加</button>
-
-<div id="tasks"></div>
-</div>
-
-<!-- タイマー -->
-<div class="card">
-<h2>⏱ ポモドーロ</h2>
-<p id="timer">25:00</p>
-
-<button onclick="startTimer()">▶</button>
-<button onclick="pauseTimer()">⏸</button>
-<button onclick="resetTimer()">🔁</button>
-
-<p class="small" id="cycle">セット：0 / 4</p>
+<button onclick="addEvent()">追加</button>
 </div>
 
 <!-- カレンダー -->
 <div class="card">
-<h2>📅 30日カレンダー</h2>
+<h2>📅 カレンダー</h2>
 <div id="calendar"></div>
-</div>
-
-<!-- アドバイス -->
-<div class="card">
-<h2>📘 アドバイス</h2>
-<div id="advice"></div>
 </div>
 
 <script>
 
-let studyData = {
-  国語:0, 数学:0, 英語:0, 理科:0, 社会:0
-};
-
-let total = 0;
 let testDate = null;
+let events = {};
 
 /* ================= 保存 ================= */
 
 function saveData(){
-  localStorage.setItem("studyData", JSON.stringify(studyData));
-  localStorage.setItem("total", total);
-  localStorage.setItem("tasks", document.getElementById("tasks").innerHTML);
   localStorage.setItem("testDate", document.getElementById("testDate").value);
+  localStorage.setItem("events", JSON.stringify(events));
 }
+
+/* ================= 読み込み ================= */
 
 function loadData(){
-  const s = JSON.parse(localStorage.getItem("studyData"));
-  if(s) studyData = s;
 
-  const t = localStorage.getItem("total");
-  if(t) total = Number(t);
-
-  const tasks = localStorage.getItem("tasks");
-  if(tasks) document.getElementById("tasks").innerHTML = tasks;
-
-  const d = localStorage.getItem("testDate");
-  if(d){
-    document.getElementById("testDate").value = d;
-    testDate = new Date(d);
-    generateCalendar();
-    showAdvice();
+  const t = localStorage.getItem("testDate");
+  if(t){
+    document.getElementById("testDate").value = t;
+    testDate = new Date(t);
   }
 
-  updateStudy();
-}
+  const e = localStorage.getItem("events");
+  if(e) events = JSON.parse(e);
 
-/* ================= 勉強 ================= */
-
-function addStudy(){
-  const s = document.getElementById("subject").value;
-  const t = Number(document.getElementById("time").value);
-
-  if(!t) return;
-
-  studyData[s] += t;
-  total += t;
-
-  updateStudy();
-  saveData();
-}
-
-function updateStudy(){
-  let html = "";
-  for(let s in studyData){
-    html += `${s}：${studyData[s]}分<br>`;
-  }
-
-  document.getElementById("studyResult").innerHTML = html;
-  document.getElementById("total").innerText = "合計：" + total + "分";
-}
-
-/* ================= 課題 ================= */
-
-function addTask(){
-  const input = document.getElementById("taskInput");
-  const date = document.getElementById("borderDate").value;
-
-  if(!input.value) return;
-
-  const div = document.createElement("div");
-  div.className = "task";
-
-  div.innerHTML = `
-    <span onclick="toggle(this)">
-      ☐ ${input.value}（${date}）
-    </span>
-    <button onclick="this.parentElement.remove(); saveData();">削除</button>
-  `;
-
-  document.getElementById("tasks").appendChild(div);
-  input.value = "";
-  saveData();
-}
-
-function toggle(el){
-  el.classList.toggle("done");
-  saveData();
+  generateCalendar();
 }
 
 /* ================= テスト ================= */
 
 function setTest(){
-  testDate = new Date(document.getElementById("testDate").value);
+  const v = document.getElementById("testDate").value;
+  if(!v) return;
+
+  testDate = new Date(v);
   saveData();
   generateCalendar();
-  showAdvice();
 }
 
-function updateCountdown(){
-  if(!testDate) return;
+/* ================= 予定追加 ================= */
 
-  const now = new Date();
-  const diff = Math.ceil((testDate - now)/(1000*60*60*24));
+function addEvent(){
 
-  document.getElementById("countdown").innerText =
-    "あと " + diff + "日";
+  const date = document.getElementById("eventDate").value;
+  const text = document.getElementById("eventText").value;
+
+  if(!date || !text){
+    alert("日付と内容を入力してね");
+    return;
+  }
+
+  if(!events[date]){
+    events[date] = [];
+  }
+
+  events[date].push({ text });
+
+  document.getElementById("eventText").value = "";
+
+  saveData();
+  generateCalendar();
 }
-
-setInterval(updateCountdown,1000);
 
 /* ================= カレンダー ================= */
 
 function generateCalendar(){
+
   if(!testDate) return;
 
   const c = document.getElementById("calendar");
   c.innerHTML = "";
 
   for(let i = 30; i >= 0; i--){
+
     let d = new Date(testDate);
     d.setDate(d.getDate() - i);
+
+    const key = d.toISOString().split("T")[0];
+    const label = `${d.getMonth()+1}/${d.getDate()}`;
 
     let div = document.createElement("div");
     div.className = "calendar-day";
 
-    let text = `${d.getMonth()+1}/${d.getDate()}`;
+    let eventText = "";
+
+    if(events[key]){
+      eventText = "<br>" + events[key]
+        .map(e => "・" + e.text)
+        .join("<br>");
+    }
 
     if(i === 0){
-      div.innerHTML = `<span class="test">${text} テスト</span>`;
+      div.innerHTML = `<span class="test">${label} テスト</span>${eventText}`;
     }
     else if(i === 14){
-      div.innerHTML = `<span class="due">${text} ⚠ 課題締切</span>`;
+      div.innerHTML = `<span class="due">${label} ⚠ 課題締切</span>${eventText}`;
     }
     else if(i < 14){
-      div.innerHTML = `<span class="focus">${text} 📚 集中期間</span>`;
+      div.innerHTML = `<span class="focus">${label} 📚 集中期間</span>${eventText}`;
     }
     else {
-      div.innerHTML = `<span>${text}</span>`;
+      div.innerHTML = `${label}${eventText}`;
     }
 
     c.appendChild(div);
   }
 }
 
-/* ================= アドバイス ================= */
+/* ================= 自動開始 ================= */
 
-function showAdvice(){
-  document.getElementById("advice").innerHTML = `
-  <p>🇬🇧 英語：音読＋文法＋熟語</p>
-  <p>🧪 理科：暗記＋筆記</p>
-  <p>🌍 社会：暗記</p>
-  <p>🔢 数学：見直し</p>
-  <p>📘 国語：漢字</p>
-  `;
-}
-
-/* ================= タイマー ================= */
-
-let time = 1500;
-let timer = null;
-let cycle = 0;
-
-function updateTimer(){
-  let m = Math.floor(time/60);
-  let s = time%60;
-
-  document.getElementById("timer").innerText =
-    `${m}:${s.toString().padStart(2,"0")}`;
-}
-
-function startTimer(){
-  if(timer) return;
-
-  timer = setInterval(()=>{
-    time--;
-    updateTimer();
-
-    if(time <= 0){
-      clearInterval(timer);
-      timer = null;
-
-      cycle++;
-      document.getElementById("cycle").innerText =
-        "セット：" + cycle + " / 4";
-
-      time = (cycle % 2 === 1) ? 300 : 1500;
-
-      updateTimer();
-      saveData();
-    }
-  },1000);
-}
-
-function pauseTimer(){
-  clearInterval(timer);
-  timer = null;
-}
-
-function resetTimer(){
-  clearInterval(timer);
-  timer = null;
-  time = 1500;
-  cycle = 0;
-  document.getElementById("cycle").innerText = "セット：0 / 4";
-  updateTimer();
-}
-
-/* ================= 起動 ================= */
-
-updateTimer();
 loadData();
 
 </script>
 
 </body>
 </html>
+🧠 この引き継ぎの意味
+
+これ1個で👇
+
+✅ GitHubにそのまま入れれば復活
+✅ 壊れても一発で再構築できる
+✅ 他のリポジトリでも再利用OK
+🚀 次やるべきこと（重要）
+
+今これ👇
+
+「作る段階」→「公開・運用段階」
+
+だから次は👇
+
+🥇 GitHub Pagesで公開
+🥈 スマホホーム画面追加
+🥉 今日やること自動表示（かなり伸びる）

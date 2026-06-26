@@ -1,7 +1,3 @@
-📦 引き継ぎ用まとめ（これ1つで復元できる）
-📌 ファイル名
-index.html
-📚 完全版コード（安定・公開OK）
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -102,7 +98,7 @@ function loadData(){
   const t = localStorage.getItem("testDate");
   if(t){
     document.getElementById("testDate").value = t;
-    testDate = new Date(t);
+    testDate = new Date(t + "T00:00:00"); // ←ズレ防止
   }
 
   const e = localStorage.getItem("events");
@@ -111,13 +107,13 @@ function loadData(){
   generateCalendar();
 }
 
-/* ================= テスト ================= */
+/* ================= テスト日設定 ================= */
 
 function setTest(){
   const v = document.getElementById("testDate").value;
   if(!v) return;
 
-  testDate = new Date(v);
+  testDate = new Date(v + "T00:00:00"); // ←ズレ防止
   saveData();
   generateCalendar();
 }
@@ -146,21 +142,31 @@ function addEvent(){
   generateCalendar();
 }
 
+/* ================= 安定日付キー ================= */
+
+function formatDate(d){
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
 /* ================= カレンダー ================= */
 
 function generateCalendar(){
 
-  if(!testDate) return;
-
   const c = document.getElementById("calendar");
   c.innerHTML = "";
+
+  // テスト未設定でも表示
+  if(!testDate){
+    c.innerHTML = "📅 テスト日を設定してください";
+    return;
+  }
 
   for(let i = 30; i >= 0; i--){
 
     let d = new Date(testDate);
     d.setDate(d.getDate() - i);
 
-    const key = d.toISOString().split("T")[0];
+    const key = formatDate(d);
     const label = `${d.getMonth()+1}/${d.getDate()}`;
 
     let div = document.createElement("div");
@@ -191,7 +197,7 @@ function generateCalendar(){
   }
 }
 
-/* ================= 自動開始 ================= */
+/* ================= 起動 ================= */
 
 loadData();
 
@@ -199,21 +205,3 @@ loadData();
 
 </body>
 </html>
-🧠 この引き継ぎの意味
-
-これ1個で👇
-
-✅ GitHubにそのまま入れれば復活
-✅ 壊れても一発で再構築できる
-✅ 他のリポジトリでも再利用OK
-🚀 次やるべきこと（重要）
-
-今これ👇
-
-「作る段階」→「公開・運用段階」
-
-だから次は👇
-
-🥇 GitHub Pagesで公開
-🥈 スマホホーム画面追加
-🥉 今日やること自動表示（かなり伸びる）

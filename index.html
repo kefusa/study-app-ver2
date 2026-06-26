@@ -1,250 +1,235 @@
-
 <!DOCTYPE html>
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Study Tracker Pro+</title>
+<title>Study Tracker App</title>
 
 <style>
 body{
-  font-family:sans-serif;
   margin:0;
-  padding:15px;
-  max-width:500px;
-  margin:auto;
-  background:#f5f5f5;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  background:#0f1115;
+  color:#fff;
 }
 
+/* ヘッダー */
+.header{
+  padding:20px;
+  font-size:20px;
+  font-weight:bold;
+}
+
+/* カード */
 .card{
-  background:white;
-  padding:15px;
-  border-radius:12px;
-  margin-bottom:15px;
+  background:#1b1f2a;
+  margin:12px;
+  padding:14px;
+  border-radius:14px;
 }
 
-input,select,button{
+/* 入力 */
+input,button{
   width:100%;
-  padding:10px;
-  margin:5px 0;
-  font-size:16px;
-}
-
-button{cursor:pointer}
-
-.calendar-day{
-  padding:6px;
-  border-bottom:1px solid #ddd;
+  padding:12px;
+  margin-top:8px;
+  border:none;
+  border-radius:10px;
   font-size:14px;
 }
 
-.test{color:red;font-weight:bold}
-.focus{color:#333}
-.due{color:orange;font-weight:bold}
+input{
+  background:#2a2f3d;
+  color:white;
+}
 
-.small{
+button{
+  background:#4c7dff;
+  color:white;
+  font-weight:bold;
+}
+
+/* カレンダー */
+.calendar{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  padding:12px;
+}
+
+/* 日カード */
+.day{
+  background:#1b1f2a;
+  border-radius:14px;
+  padding:12px;
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+
+.date{
   font-size:14px;
-  color:#666;
+  opacity:0.7;
+}
+
+.today{
+  border:2px solid #4c7dff;
+}
+
+.title{
+  font-size:15px;
+  font-weight:bold;
+}
+
+.sub{
+  font-size:13px;
+  opacity:0.8;
+}
+
+/* 色分け */
+.test{color:#ff4d4d}
+.focus{color:#ffd24d}
+.due{color:#ff9f43}
+
+/* ストリーク */
+.streak{
+  font-size:22px;
+  font-weight:bold;
+  color:#4c7dff;
 }
 </style>
 </head>
 
 <body>
 
-<h1>📚 Study Tracker Pro+</h1>
+<div class="header">📚 Study Tracker</div>
 
-<!-- ストリーク -->
 <div class="card">
-<h2>🔥 ストリーク</h2>
-<p id="streak">0日</p>
+<div>🔥 ストリーク</div>
+<div class="streak" id="streak">0日</div>
 </div>
 
-<!-- アドバイス -->
 <div class="card">
-<h2>💡 アドバイス</h2>
-<p id="advice">読み込み中...</p>
-</div>
-
-<!-- テスト日 -->
-<div class="card">
-<h2>📅 テスト日</h2>
-<input type="date" id="testDate">
+<div>📅 テスト日</div>
+<input id="testDate" placeholder="YYYY-MM-DD">
 <button onclick="setTest()">設定</button>
 </div>
 
-<!-- 予定 -->
 <div class="card">
-<h2>📅 予定追加</h2>
+<div>📌 予定追加</div>
 
-<input type="date" id="eventDate">
-
-<select id="eventType">
-<option value="study">勉強</option>
-<option value="club">部活</option>
-<option value="cram">塾</option>
-<option value="task">課題</option>
-</select>
-
-<input type="text" id="eventText" placeholder="内容">
-
+<input id="eventDate" placeholder="YYYY-MM-DD">
+<input id="eventText" placeholder="内容">
 <button onclick="addEvent()">追加</button>
 </div>
 
-<!-- カレンダー -->
-<div class="card">
-<h2>📅 カレンダー</h2>
-<div id="calendar">読み込み中...</div>
-</div>
+<div class="calendar" id="calendar"></div>
 
 <script>
 
 let testDate=null;
 let events={};
 
-/* ================= 安全保存 ================= */
-function saveData(){
-  try{
-    localStorage.setItem("testDate", document.getElementById("testDate")?.value || "");
-    localStorage.setItem("events", JSON.stringify(events));
-  }catch(e){}
+/* 保存 */
+function save(){
+  localStorage.setItem("testDate",document.getElementById("testDate").value||"");
+  localStorage.setItem("events",JSON.stringify(events));
 }
 
-/* ================= 読み込み ================= */
-function loadData(){
-  try{
-    const t=localStorage.getItem("testDate");
-    if(t){
-      document.getElementById("testDate").value=t;
-      testDate=new Date(t+"T00:00:00");
-    }
+/* 読み込み */
+function load(){
+  const t=localStorage.getItem("testDate");
+  if(t){
+    document.getElementById("testDate").value=t;
+    testDate=new Date(t.replace(/-/g,"/"));
+  }
 
-    const e=localStorage.getItem("events");
-    if(e) events=JSON.parse(e);
+  const e=localStorage.getItem("events");
+  if(e) events=JSON.parse(e);
 
-  }catch(e){}
-
-  updateAll();
+  render();
 }
 
-/* ================= テスト日 ================= */
+/* テスト日 */
 function setTest(){
-  try{
-    const v=document.getElementById("testDate").value;
-    if(!v) return;
-    testDate=new Date(v+"T00:00:00");
-    saveData();
-    updateAll();
-  }catch(e){}
+  const v=document.getElementById("testDate").value;
+  if(!v) return;
+
+  testDate=new Date(v.replace(/-/g,"/"));
+  save();
+  render();
 }
 
-/* ================= 予定 ================= */
+/* 予定 */
 function addEvent(){
-  try{
-    const date=document.getElementById("eventDate").value;
-    const text=document.getElementById("eventText").value;
+  const d=document.getElementById("eventDate").value;
+  const t=document.getElementById("eventText").value;
+  if(!d||!t) return;
 
-    if(!date||!text) return;
+  if(!events[d]) events[d]=[];
+  events[d].push({text:t});
 
-    if(!events[date]) events[date]=[];
-    events[date].push({text});
-
-    document.getElementById("eventText").value="";
-
-    saveData();
-    updateAll();
-  }catch(e){}
+  save();
+  render();
 }
 
-/* ================= 日付 ================= */
-function formatDate(d){
+/* 日付キー */
+function key(d){
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
 
-/* ================= ストリーク（簡易） ================= */
+/* ストリーク（簡易） */
 function updateStreak(){
-  const el=document.getElementById("streak");
-  if(!el) return;
-
-  let count=0;
-  if(events){
-    count=Object.keys(events).length;
-  }
-  el.innerText=`${count}日`;
+  document.getElementById("streak").innerText = Object.keys(events).length + "日";
 }
 
-/* ================= アドバイス ================= */
-function updateAdvice(){
-  const el=document.getElementById("advice");
-  if(!el) return;
-
-  const tips=[
-    "今日は30分だけでもやる",
-    "小さい目標を1つだけ決める",
-    "やる気は後から出る",
-    "5分だけ始めるのがコツ"
-  ];
-
-  el.innerText=tips[Math.floor(Math.random()*tips.length)];
-}
-
-/* ================= カレンダー ================= */
-function generateCalendar(){
+/* カレンダー */
+function render(){
 
   const c=document.getElementById("calendar");
-  if(!c) return;
-
   c.innerHTML="";
 
   if(!testDate){
-    c.innerHTML="📅 テスト日を設定してください";
+    c.innerHTML="<div class='card'>テスト日を設定してください</div>";
     return;
   }
 
-  for(let i=30;i>=0;i--){
+  for(let i=0;i<=30;i++){
 
-    try{
-      let d=new Date(testDate);
-      d.setDate(d.getDate()-i);
+    let d=new Date(testDate);
+    d.setDate(d.getDate()-i);
 
-      const key=formatDate(d);
-      const label=`${d.getMonth()+1}/${d.getDate()}`;
+    let k=key(d);
+    let label=`${d.getMonth()+1}/${d.getDate()}`;
 
-      let div=document.createElement("div");
-      div.className="calendar-day";
+    let div=document.createElement("div");
+    div.className="day"+(i===0?" today":"");
 
-      let text="";
+    let ev="";
 
-      if(events?.[key]){
-        text="<br>"+events[key].map(e=>"・"+e.text).join("<br>");
-      }
+    if(events[k]){
+      ev=events[k].map(e=>"・"+e.text).join("<br>");
+    }
 
-      if(i===0){
-        div.innerHTML=`<span class="test">${label} テスト</span>${text}`;
-      }else if(i===14){
-        div.innerHTML=`<span class="due">${label} ⚠ 締切</span>${text}`;
-      }else if(i<14){
-        div.innerHTML=`<span class="focus">${label} 📚 集中期間</span>${text}`;
-      }else{
-        div.innerHTML=`${label}${text}`;
-      }
+    let tag="";
+    if(i===0) tag="📌 テスト日";
+    else if(i===14) tag="⚠ 締切";
+    else if(i<14) tag="📚 集中期間";
 
-      c.appendChild(div);
+    div.innerHTML=`
+      <div class="date">${label}</div>
+      <div class="title ${i===0?'test':i===14?'due':i<14?'focus':''}">${tag}</div>
+      <div class="sub">${ev}</div>
+    `;
 
-    }catch(e){}
+    c.appendChild(div);
   }
+
+  updateStreak();
 }
 
-/* ================= 全更新 ================= */
-function updateAll(){
-  try{
-    generateCalendar();
-    updateStreak();
-    updateAdvice();
-  }catch(e){}
-}
-
-/* ================= 起動 ================= */
-loadData();
+/* 起動 */
+load();
 
 </script>
 
